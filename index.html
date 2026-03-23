@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简音游</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">极简音游</h1>
+        
+        <div class="game-wrapper">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn" class="btn">开始游戏</button>
+            <button id="pauseBtn" class="btn btn-secondary">暂停</button>
+            <button id="resetBtn" class="btn btn-secondary">重置</button>
+        </div>
+        
+        <div class="audio-controls">
+            <button id="audioPlayBtn" class="btn btn-secondary">播放音乐</button>
+            <button id="audioPauseBtn" class="btn btn-secondary">暂停音乐</button>
+            <span class="audio-name">默认背景音乐</span>
+        </div>
+        
+        <div class="score-display">
+            <span>分数: </span>
+            <span id="score">0</span>
+        </div>
+        
+        <div class="instructions">
+            <p>当图形到达左侧判定线时点击，精准点击得分！</p>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
