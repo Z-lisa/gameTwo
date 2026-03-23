@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>极简音游</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #canvas {
+            flex: 1;
+            display: block;
+            cursor: pointer;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+
+        #scoreSection {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #score {
+            font-size: 48px;
+            font-weight: 300;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255,255,255,0.3);
+            transition: transform 0.1s;
+        }
+
+        #score.pop {
+            transform: scale(1.2);
+            color: #fff;
+            text-shadow: 0 0 30px rgba(255,255,255,0.8);
+        }
+
+        #timer {
+            font-size: 24px;
+            font-weight: 300;
+            color: #888;
+        }
+
+        #controls {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #startScreen h1, #gameOverScreen h1 {
+            font-size: 64px;
+            font-weight: 100;
+            margin-bottom: 20px;
+            letter-spacing: 20px;
+        }
+
+        #startScreen p, #gameOverScreen p {
+            font-size: 16px;
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        #finalScore {
+            font-size: 72px;
+            font-weight: 300;
+            color: #fff;
+            margin-bottom: 40px;
+        }
+
+        #startBtn, #restartBtn {
+            font-size: 24px;
+            padding: 15px 50px;
+            background: transparent;
+            border: 1px solid #fff;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #startBtn:hover, #restartBtn:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            font-weight: 300;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.2s;
+        }
+
+        #feedback.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        #feedback.perfect {
+            color: #fff;
+            text-shadow: 0 0 30px rgba(255,255,255,0.8);
+        }
+
+        #feedback.miss {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="canvas"></canvas>
+        
+        <div id="ui">
+            <div id="scoreSection">
+                <div id="score">0</div>
+                <div id="timer">60s</div>
+            </div>
+            <div id="controls">
+                <button class="btn" id="audioBtn">播放音频</button>
+                <button class="btn" id="resetBtn">重置</button>
+            </div>
+        </div>
+
+        <div id="feedback"></div>
+
+        <div id="startScreen">
+            <h1>节 拍</h1>
+            <p>点击屏幕或按空格键，当图形到达左侧判定线时</p>
+            <button id="startBtn">开始游戏</button>
+        </div>
+
+        <div id="gameOverScreen" class="hidden">
+            <h1>游 戏 结 束</h1>
+            <div id="finalScore">0</div>
+            <p>时间到！</p>
+            <button id="restartBtn">重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        // 游戏配置
+        const CONFIG = {
+            noteSpeed: 250, // 像素/秒（稍微降低速度，更容易点击）
+            judgeLineX: 120, // 判定线位置
+            perfectRange: 100, // 精准判定范围（像素）
+            spawnInterval: 1200, // 生成间隔（毫秒）
+            gameDuration: 60, // 游戏时长（秒）
+            colors: {
+                background: '#0a0a0a',
+                judgeLine: '#ffffff',
+                note: '#888888',
+                noteActive: '#ffffff',
+                perfect: '#ffffff',
+                miss: '#444444'
+            }
+        };
+
+        // 游戏状态
+        const state = {
+            isPlaying: false,
+            isPaused: false,
+            score: 0,
+            notes: [],
+            particles: [], // 点击特效粒子
+            lastSpawnTime: 0,
+            audioPlaying: false,
+            animationId: null,
+            timeRemaining: CONFIG.gameDuration,
+            timerInterval: null
+        };
+
+        // DOM 元素
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreEl = document.getElementById('finalScore');
+        const feedbackEl = document.getElementById('feedback');
+        const audioBtn = document.getElementById('audioBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // 音频上下文
+        let audioContext = null;
+        let nextNoteTime = 0;
+        let timerID = null;
+        const lookahead = 25.0;
+        const scheduleAheadTime = 0.1;
+
+        // 初始化 Canvas 尺寸
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // 粒子特效类
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 200;
+                this.vy = (Math.random() - 0.5) * 200;
+                this.life = 1.0;
+                this.decay = 2.0;
+                this.size = Math.random() * 4 + 2;
+            }
+
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                this.life -= this.decay * dt;
+                return this.life > 0;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // 音符类
+        class Note {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.width = 60;
+                this.height = 60;
+                this.hit = false;
+                this.missed = false;
+                this.scale = 1;
+                this.targetScale = 1;
+                this.color = CONFIG.colors.note;
+                this.hitBoxRadius = 50;
+                this.hitTime = 0;
+            }
+
+            update(dt) {
+                // 平滑缩放动画
+                this.scale += (this.targetScale - this.scale) * 10 * dt;
+                
+                if (this.hit || this.missed) {
+                    this.hitTime += dt;
+                    this.scale = 1 + this.hitTime * 3;
+                    this.color = this.hit ? CONFIG.colors.perfect : CONFIG.colors.miss;
+                    return this.hitTime < 0.3;
+                }
+                
+                this.x -= CONFIG.noteSpeed * dt;
+                
+                // 检查是否错过
+                if (this.x < CONFIG.judgeLineX - 150 && !this.missed && !this.hit) {
+                    this.missed = true;
+                    showFeedback('miss');
+                }
+                
+                return this.x > -100;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(this.scale, this.scale);
+                
+                // 绘制发光效果
+                if (this.hit) {
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 30;
+                }
+                
+                ctx.fillStyle = this.color;
+                
+                if (this.type === 'circle') {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                }
+                
+                ctx.restore();
+            }
+
+            checkHit(clickX, clickY) {
+                if (this.hit || this.missed) return false;
+                
+                const dx = clickX - this.x;
+                const dy = clickY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // 检查是否点击在图形上
+                if (distance < this.hitBoxRadius + this.width / 2) {
+                    // 检查时机：图形需要在判定线附近
+                    const positionDiff = Math.abs(this.x - CONFIG.judgeLineX);
+                    if (positionDiff < CONFIG.perfectRange) {
+                        this.hit = true;
+                        this.targetScale = 1.3;
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        // 初始化音频
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // 播放节拍音
+        function playClick(time) {
+            const osc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            osc.frequency.value = 800;
+            osc.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, time);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+            
+            osc.start(time);
+            osc.stop(time + 0.1);
+        }
+
+        // 调度器
+        function scheduler() {
+            while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) {
+                playClick(nextNoteTime);
+                spawnNote();
+                nextNoteTime += CONFIG.spawnInterval / 1000;
+            }
+            timerID = setTimeout(scheduler, lookahead);
+        }
+
+        // 生成音符
+        function spawnNote() {
+            const types = ['circle', 'rect'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            const y = canvas.height / 2 + (Math.random() - 0.5) * 200;
+            const note = new Note(canvas.width + 80, y, type);
+            state.notes.push(note);
+        }
+
+        // 创建点击特效
+        function createHitEffect(x, y) {
+            for (let i = 0; i < 12; i++) {
+                state.particles.push(new Particle(x, y));
+            }
+        }
+
+        // 开始音频
+        function startAudio() {
+            if (!audioContext) initAudio();
+            
+            if (state.audioPlaying) {
+                clearTimeout(timerID);
+                state.audioPlaying = false;
+                state.isPaused = true;
+                audioBtn.textContent = '播放音频';
+                stopTimer();
+            } else {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                nextNoteTime = audioContext.currentTime + 0.1;
+                scheduler();
+                state.audioPlaying = true;
+                state.isPaused = false;
+                audioBtn.textContent = '暂停音频';
+                startTimer();
+            }
+        }
+
+        // 开始倒计时
+        function startTimer() {
+            if (state.timerInterval) return;
+            
+            state.timerInterval = setInterval(() => {
+                if (!state.isPaused && state.isPlaying) {
+                    state.timeRemaining--;
+                    timerEl.textContent = state.timeRemaining + 's';
+                    
+                    if (state.timeRemaining <= 0) {
+                        endGame();
+                    }
+                }
+            }, 1000);
+        }
+
+        // 停止倒计时
+        function stopTimer() {
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+                state.timerInterval = null;
+            }
+        }
+
+        // 结束游戏
+        function endGame() {
+            state.isPlaying = false;
+            state.isPaused = false;
+            
+            if (state.animationId) {
+                cancelAnimationFrame(state.animationId);
+            }
+            
+            if (state.audioPlaying) {
+                clearTimeout(timerID);
+                state.audioPlaying = false;
+                audioBtn.textContent = '播放音频';
+            }
+            
+            stopTimer();
+            
+            finalScoreEl.textContent = state.score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        // 显示反馈
+        function showFeedback(type) {
+            feedbackEl.className = 'show ' + type;
+            feedbackEl.textContent = type === 'perfect' ? '+100' : 'miss';
+            
+            setTimeout(() => {
+                feedbackEl.classList.remove('show');
+            }, 300);
+        }
+
+        // 处理点击
+        function handleInput(x, y) {
+            if (!state.isPlaying || state.isPaused) {
+                console.log('游戏未运行或已暂停');
+                return;
+            }
+            
+            console.log('点击位置:', x, y);
+            console.log('当前音符数:', state.notes.length);
+            
+            let hit = false;
+            
+            // 遍历所有音符，检查点击
+            for (let i = state.notes.length - 1; i >= 0; i--) {
+                const note = state.notes[i];
+                
+                if (note.hit || note.missed) continue;
+                
+                const dx = x - note.x;
+                const dy = y - note.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                console.log(`音符${i}: 位置(${note.x.toFixed(1)}, ${note.y.toFixed(1)}), 距离${distance.toFixed(1)}`);
+                
+                // 检查是否点击在图形上（更宽松的判定）
+                if (distance < note.hitBoxRadius + note.width / 2) {
+                    // 检查时机
+                    const positionDiff = Math.abs(note.x - CONFIG.judgeLineX);
+                    console.log(`  判定线距离: ${positionDiff.toFixed(1)}, 允许范围: ${CONFIG.perfectRange}`);
+                    
+                    if (positionDiff < CONFIG.perfectRange) {
+                        note.hit = true;
+                        note.targetScale = 1.5;
+                        state.score += 100;
+                        scoreEl.textContent = state.score;
+                        
+                        // 分数动画
+                        scoreEl.classList.add('pop');
+                        setTimeout(() => scoreEl.classList.remove('pop'), 100);
+                        
+                        // 创建粒子特效
+                        createHitEffect(note.x, note.y);
+                        
+                        showFeedback('perfect');
+                        hit = true;
+                        console.log('命中! 得分:', state.score);
+                        break;
+                    } else {
+                        console.log('  时机不对，距离判定线太远');
+                    }
+                }
+            }
+            
+            if (!hit) {
+                console.log('未命中任何音符');
+            }
+        }
+
+        // 游戏循环
+        let lastTime = 0;
+        function gameLoop(currentTime) {
+            if (!state.isPlaying) return;
+            
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            if (!state.isPaused) {
+                // 更新音符
+                state.notes = state.notes.filter(note => note.update(dt));
+                
+                // 更新粒子
+                state.particles = state.particles.filter(p => p.update(dt));
+            }
+            
+            // 绘制
+            draw();
+            
+            state.animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // 绘制
+        function draw() {
+            // 清空画布
+            ctx.fillStyle = CONFIG.colors.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制判定线
+            ctx.strokeStyle = CONFIG.colors.judgeLine;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(CONFIG.judgeLineX, 0);
+            ctx.lineTo(CONFIG.judgeLineX, canvas.height);
+            ctx.stroke();
+            
+            // 绘制判定区域提示
+            ctx.fillStyle = 'rgba(255,255,255,0.03)';
+            ctx.fillRect(
+                CONFIG.judgeLineX - CONFIG.perfectRange,
+                0,
+                CONFIG.perfectRange * 2,
+                canvas.height
+            );
+            
+            // 绘制判定线发光效果
+            ctx.shadowColor = 'rgba(255,255,255,0.5)';
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(CONFIG.judgeLineX - CONFIG.perfectRange, 0);
+            ctx.lineTo(CONFIG.judgeLineX - CONFIG.perfectRange, canvas.height);
+            ctx.moveTo(CONFIG.judgeLineX + CONFIG.perfectRange, 0);
+            ctx.lineTo(CONFIG.judgeLineX + CONFIG.perfectRange, canvas.height);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            // 绘制音符
+            state.notes.forEach(note => note.draw(ctx));
+            
+            // 绘制粒子特效
+            state.particles.forEach(p => p.draw(ctx));
+        }
+
+        // 开始游戏
+        function startGame() {
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            state.isPlaying = true;
+            state.isPaused = false;
+            state.score = 0;
+            state.notes = [];
+            state.particles = [];
+            state.timeRemaining = CONFIG.gameDuration;
+            scoreEl.textContent = '0';
+            timerEl.textContent = state.timeRemaining + 's';
+            lastTime = performance.now();
+            
+            if (!state.audioPlaying) {
+                startAudio();
+            }
+            
+            gameLoop(performance.now());
+        }
+
+        // 重置游戏
+        function resetGame() {
+            state.isPlaying = false;
+            state.isPaused = false;
+            state.score = 0;
+            state.notes = [];
+            state.particles = [];
+            state.timeRemaining = CONFIG.gameDuration;
+            scoreEl.textContent = '0';
+            timerEl.textContent = state.timeRemaining + 's';
+            
+            if (state.animationId) {
+                cancelAnimationFrame(state.animationId);
+            }
+            
+            if (state.audioPlaying) {
+                clearTimeout(timerID);
+                state.audioPlaying = false;
+                audioBtn.textContent = '播放音频';
+            }
+            
+            stopTimer();
+            
+            startScreen.classList.remove('hidden');
+            gameOverScreen.classList.add('hidden');
+            draw();
+        }
+
+        // 事件监听
+        canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            console.log('鼠标点击:', x, y);
+            handleInput(x, y);
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            console.log('触摸点击:', x, y);
+            handleInput(x, y);
+        }, { passive: false });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                // 空格键：自动命中判定线附近的第一个音符
+                for (let i = state.notes.length - 1; i >= 0; i--) {
+                    const note = state.notes[i];
+                    if (!note.hit && !note.missed) {
+                        const positionDiff = Math.abs(note.x - CONFIG.judgeLineX);
+                        if (positionDiff < CONFIG.perfectRange) {
+                            note.hit = true;
+                            note.targetScale = 1.5;
+                            state.score += 100;
+                            scoreEl.textContent = state.score;
+                            scoreEl.classList.add('pop');
+                            setTimeout(() => scoreEl.classList.remove('pop'), 100);
+                            createHitEffect(note.x, note.y);
+                            showFeedback('perfect');
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (!state.isPlaying) draw();
+        });
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+        audioBtn.addEventListener('click', startAudio);
+        resetBtn.addEventListener('click', resetGame);
+
+        // 初始化
+        resizeCanvas();
+        draw();
+    </script>
+</body>
+</html>
