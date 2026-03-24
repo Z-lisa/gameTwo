@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>极简音游</title>
+    <title>节奏大师 - 音乐游戏</title>
     <style>
         * {
             margin: 0;
@@ -12,11 +12,12 @@
         }
 
         body {
-            background: #0a0a0a;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             color: #e0e0e0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
             touch-action: none;
+            min-height: 100vh;
         }
 
         #gameContainer {
@@ -35,39 +36,66 @@
 
         #ui {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             pointer-events: none;
+            z-index: 10;
         }
 
         #scoreSection {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
 
         #score {
-            font-size: 48px;
-            font-weight: 300;
+            font-size: 52px;
+            font-weight: 700;
             color: #fff;
-            text-shadow: 0 0 20px rgba(255,255,255,0.3);
-            transition: transform 0.1s;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4);
+            transition: transform 0.15s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            letter-spacing: 2px;
         }
 
         #score.pop {
-            transform: scale(1.2);
-            color: #fff;
-            text-shadow: 0 0 30px rgba(255,255,255,0.8);
+            transform: scale(1.3);
+            color: #ffd700;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 60px rgba(255, 215, 0, 0.6);
+        }
+
+        #combo {
+            font-size: 28px;
+            font-weight: 600;
+            color: #ff6b6b;
+            text-shadow: 0 0 15px rgba(255, 107, 107, 0.8);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        #combo.show {
+            opacity: 1;
+            animation: comboShake 0.3s ease;
+        }
+
+        @keyframes comboShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px) rotate(-2deg); }
+            75% { transform: translateX(3px) rotate(2deg); }
         }
 
         #timer {
-            font-size: 24px;
-            font-weight: 300;
-            color: #888;
+            font-size: 22px;
+            font-weight: 500;
+            color: #aaa;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
         }
 
         #controls {
@@ -77,71 +105,273 @@
         }
 
         .btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+            border: 2px solid rgba(255,255,255,0.3);
             color: #fff;
-            padding: 10px 20px;
+            padding: 12px 24px;
             font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
-            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(15px);
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .btn:hover {
-            background: rgba(255,255,255,0.2);
+            background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1));
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
 
         .btn:active {
-            transform: scale(0.95);
+            transform: translateY(0) scale(0.98);
         }
 
-        #startScreen, #gameOverScreen {
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #ff5252, #ff7043);
+            box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6);
+        }
+
+        #startScreen, #gameOverScreen, #difficultyScreen {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.9);
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.97), rgba(15, 52, 96, 0.97));
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 100;
+            backdrop-filter: blur(20px);
         }
 
-        #startScreen h1, #gameOverScreen h1 {
-            font-size: 64px;
-            font-weight: 100;
-            margin-bottom: 20px;
-            letter-spacing: 20px;
+        #difficultyScreen {
+            z-index: 101;
         }
 
-        #startScreen p, #gameOverScreen p {
-            font-size: 16px;
+        .screen-title {
+            font-size: 72px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #ff6b6b, #ffd700, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+            letter-spacing: 15px;
+            animation: titleGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes titleGlow {
+            from { filter: drop-shadow(0 0 20px rgba(255, 107, 107, 0.5)); }
+            to { filter: drop-shadow(0 0 40px rgba(78, 205, 196, 0.8)); }
+        }
+
+        .screen-subtitle {
+            font-size: 18px;
             color: #888;
-            margin-bottom: 40px;
+            margin-bottom: 50px;
+            letter-spacing: 5px;
+        }
+
+        .difficulty-container {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 800px;
+            padding: 20px;
+        }
+
+        .difficulty-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+            border: 2px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 30px 40px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 180px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .difficulty-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: rgba(255,255,255,0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .difficulty-card.easy:hover {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.05));
+            border-color: #4caf50;
+        }
+
+        .difficulty-card.normal:hover {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 193, 7, 0.05));
+            border-color: #ffc107;
+        }
+
+        .difficulty-card.hard:hover {
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(244, 67, 54, 0.05));
+            border-color: #f44336;
+        }
+
+        .difficulty-card.active {
+            transform: translateY(-10px) scale(1.05);
+        }
+
+        .difficulty-card.easy.active {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(76, 175, 80, 0.1));
+            border-color: #4caf50;
+            box-shadow: 0 0 30px rgba(76, 175, 80, 0.4);
+        }
+
+        .difficulty-card.normal.active {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.3), rgba(255, 193, 7, 0.1));
+            border-color: #ffc107;
+            box-shadow: 0 0 30px rgba(255, 193, 7, 0.4);
+        }
+
+        .difficulty-card.hard.active {
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.3), rgba(244, 67, 54, 0.1));
+            border-color: #f44336;
+            box-shadow: 0 0 30px rgba(244, 67, 54, 0.4);
+        }
+
+        .difficulty-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .difficulty-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .difficulty-card.easy .difficulty-name { color: #4caf50; }
+        .difficulty-card.normal .difficulty-name { color: #ffc107; }
+        .difficulty-card.hard .difficulty-name { color: #f44336; }
+
+        .difficulty-desc {
+            font-size: 13px;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        .start-btn, .restart-btn {
+            margin-top: 40px;
+            font-size: 22px;
+            padding: 18px 60px;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            box-shadow: 0 8px 30px rgba(255, 107, 107, 0.5);
+        }
+
+        .start-btn:hover, .restart-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 12px 40px rgba(255, 107, 107, 0.7);
+        }
+
+        .start-btn:active, .restart-btn:active {
+            transform: translateY(0) scale(0.98);
         }
 
         #finalScore {
-            font-size: 72px;
-            font-weight: 300;
-            color: #fff;
-            margin-bottom: 40px;
+            font-size: 100px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffd700, #ff8e53);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 20px 0;
+            animation: scorePop 0.5s ease-out;
         }
 
-        #startBtn, #restartBtn {
-            font-size: 24px;
-            padding: 15px 50px;
-            background: transparent;
-            border: 1px solid #fff;
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.3s;
+        @keyframes scorePop {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
         }
 
-        #startBtn:hover, #restartBtn:hover {
-            background: #fff;
-            color: #000;
+        .stats-container {
+            display: flex;
+            gap: 40px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: rgba(255,255,255,0.05);
+            padding: 20px 30px;
+            border-radius: 15px;
+            min-width: 120px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #888;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-item.perfect .stat-value { color: #ffd700; }
+        .stat-item.great .stat-value { color: #4ecdc4; }
+        .stat-item.good .stat-value { color: #4caf50; }
+        .stat-item.miss .stat-value { color: #f44336; }
+
+        .grade-display {
+            font-size: 120px;
+            font-weight: 900;
+            margin: 20px 0;
+            animation: gradeBounce 0.6s ease-out;
+        }
+
+        .grade-display.S { color: #ffd700; text-shadow: 0 0 30px rgba(255, 215, 0, 0.8); }
+        .grade-display.A { color: #4ecdc4; text-shadow: 0 0 30px rgba(78, 205, 196, 0.8); }
+        .grade-display.B { color: #4caf50; text-shadow: 0 0 30px rgba(76, 175, 80, 0.8); }
+        .grade-display.C { color: #ff9800; text-shadow: 0 0 30px rgba(255, 152, 0, 0.8); }
+        .grade-display.D { color: #f44336; text-shadow: 0 0 30px rgba(244, 67, 54, 0.8); }
+
+        @keyframes gradeBounce {
+            0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+            60% { transform: scale(1.2) rotate(5deg); }
+            100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+
+        .game-over-message {
+            font-size: 18px;
+            color: #888;
+            margin-bottom: 20px;
         }
 
         .hidden {
@@ -150,28 +380,232 @@
 
         #feedback {
             position: absolute;
-            top: 50%;
+            top: 45%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 36px;
-            font-weight: 300;
+            font-size: 48px;
+            font-weight: 800;
             pointer-events: none;
             opacity: 0;
-            transition: all 0.2s;
+            transition: all 0.25s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 20;
+            letter-spacing: 3px;
         }
 
         #feedback.show {
             opacity: 1;
             transform: translate(-50%, -50%) scale(1.2);
+            animation: feedbackFloat 0.5s ease-out forwards;
+        }
+
+        @keyframes feedbackFloat {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            30% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+            100% { transform: translate(-50%, -60%) scale(1); opacity: 0; }
         }
 
         #feedback.perfect {
-            color: #fff;
-            text-shadow: 0 0 30px rgba(255,255,255,0.8);
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4);
+        }
+
+        #feedback.great {
+            color: #4ecdc4;
+            text-shadow: 0 0 20px rgba(78, 205, 196, 0.8), 0 0 40px rgba(78, 205, 196, 0.4);
+        }
+
+        #feedback.good {
+            color: #4caf50;
+            text-shadow: 0 0 20px rgba(76, 175, 80, 0.8), 0 0 40px rgba(76, 175, 80, 0.4);
         }
 
         #feedback.miss {
             color: #666;
+            text-shadow: none;
+        }
+
+        #progressBar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            z-index: 10;
+        }
+
+        #progressFill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ffd700, #4ecdc4);
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+
+        #virtualKeys {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 15;
+            pointer-events: auto;
+        }
+
+        .virtual-key {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.15s;
+            backdrop-filter: blur(10px);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .virtual-key:hover, .virtual-key.active {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.4), rgba(255, 142, 83, 0.4));
+            border-color: #ff6b6b;
+            transform: scale(0.95);
+            box-shadow: 0 0 30px rgba(255, 107, 107, 0.6);
+        }
+
+        .virtual-key.left { border-color: #ff6b6b; }
+        .virtual-key.middle { border-color: #ffd700; }
+        .virtual-key.right { border-color: #4ecdc4; }
+
+        .instructions {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            pointer-events: none;
+            background: rgba(0,0,0,0.3);
+            padding: 15px 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .instructions p {
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .instructions-label {
+            color: rgba(255,255,255,0.5);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .key-hint {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 32px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 0 10px;
+            border-radius: 8px;
+            margin: 0 2px;
+            font-weight: 700;
+            color: #fff;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+
+        .key-hint:hover {
+            background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1));
+            transform: translateY(-2px);
+        }
+
+        .key-hint.space {
+            min-width: 80px;
+        }
+
+        @media (max-width: 768px) {
+            .screen-title {
+                font-size: 42px;
+                letter-spacing: 8px;
+            }
+
+            .difficulty-container {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .difficulty-card {
+                min-width: 280px;
+                padding: 20px 30px;
+            }
+
+            #finalScore {
+                font-size: 64px;
+            }
+
+            .stats-container {
+                gap: 15px;
+            }
+
+            .stat-item {
+                padding: 15px 20px;
+                min-width: 90px;
+            }
+
+            .stat-value {
+                font-size: 28px;
+            }
+
+            #virtualKeys {
+                bottom: 20px;
+                gap: 15px;
+            }
+
+            .virtual-key {
+                width: 65px;
+                height: 65px;
+                font-size: 22px;
+            }
+
+            .instructions {
+                display: none;
+            }
+
+            #controls {
+                gap: 5px;
+            }
+
+            #controls .btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            #score {
+                font-size: 36px;
+            }
+
+            #timer {
+                font-size: 16px;
+                padding: 5px 10px;
+            }
         }
     </style>
 </head>
@@ -182,44 +616,158 @@
         <div id="ui">
             <div id="scoreSection">
                 <div id="score">0</div>
+                <div id="combo">0 COMBO</div>
                 <div id="timer">60s</div>
             </div>
             <div id="controls">
-                <button class="btn" id="audioBtn">播放音频</button>
-                <button class="btn" id="resetBtn">重置</button>
+                <button class="btn" id="audioBtn">🔊 音效</button>
+                <button class="btn" id="resetBtn">🔄 重置</button>
+                <button class="btn btn-primary" id="pauseBtn">⏸️ 暂停</button>
+                <button class="btn" id="exitBtn">🚪 退出</button>
             </div>
         </div>
 
         <div id="feedback"></div>
 
+        <div id="progressBar">
+            <div id="progressFill" style="width: 100%"></div>
+        </div>
+
+        <div id="virtualKeys" class="hidden">
+            <div class="virtual-key left" data-key="d">D</div>
+            <div class="virtual-key middle" data-key="f">F</div>
+            <div class="virtual-key middle" data-key="j">J</div>
+            <div class="virtual-key right" data-key="k">K</div>
+        </div>
+
+        <div class="instructions" id="instructions">
+            <p>
+                <span class="instructions-label">操作方式</span>
+                <span class="key-hint">D</span>
+                <span class="key-hint">F</span>
+                <span class="key-hint">J</span>
+                <span class="key-hint">K</span>
+                <span class="key-hint space">SPACE</span>
+            </p>
+            <p>
+                <span class="instructions-label">游戏规则</span>
+                当音符到达左侧判定线时按下对应按键
+            </p>
+        </div>
+
         <div id="startScreen">
-            <h1>节 拍</h1>
-            <p>点击屏幕或按空格键，当图形到达左侧判定线时</p>
-            <button id="startBtn">开始游戏</button>
+            <h1 class="screen-title">节奏大师</h1>
+            <p class="screen-subtitle">RHYTHM MASTER</p>
+            <button class="start-btn" id="startBtn">开始游戏</button>
+        </div>
+
+        <div id="difficultyScreen" class="hidden">
+            <h1 class="screen-title">选择难度</h1>
+            <p class="screen-subtitle">SELECT DIFFICULTY</p>
+            <div class="difficulty-container">
+                <div class="difficulty-card easy" data-difficulty="easy">
+                    <div class="difficulty-icon">🌱</div>
+                    <div class="difficulty-name">简单</div>
+                    <div class="difficulty-desc">慢速音符<br>适合新手入门</div>
+                </div>
+                <div class="difficulty-card normal active" data-difficulty="normal">
+                    <div class="difficulty-icon">⚡</div>
+                    <div class="difficulty-name">普通</div>
+                    <div class="difficulty-desc">中等速度<br>标准游戏体验</div>
+                </div>
+                <div class="difficulty-card hard" data-difficulty="hard">
+                    <div class="difficulty-icon">🔥</div>
+                    <div class="difficulty-name">困难</div>
+                    <div class="difficulty-desc">高速音符<br>挑战你的极限</div>
+                </div>
+            </div>
+            <button class="start-btn" id="confirmDifficultyBtn">开始挑战</button>
         </div>
 
         <div id="gameOverScreen" class="hidden">
-            <h1>游 戏 结 束</h1>
+            <h1 class="screen-title">游戏结束</h1>
+            <p class="game-over-message">GAME OVER</p>
+            <div class="grade-display" id="grade">S</div>
             <div id="finalScore">0</div>
-            <p>时间到！</p>
-            <button id="restartBtn">重新开始</button>
+            <div class="stats-container">
+                <div class="stat-item perfect">
+                    <div class="stat-value" id="perfectCount">0</div>
+                    <div class="stat-label">Perfect</div>
+                </div>
+                <div class="stat-item great">
+                    <div class="stat-value" id="greatCount">0</div>
+                    <div class="stat-label">Great</div>
+                </div>
+                <div class="stat-item good">
+                    <div class="stat-value" id="goodCount">0</div>
+                    <div class="stat-label">Good</div>
+                </div>
+                <div class="stat-item miss">
+                    <div class="stat-value" id="missCount">0</div>
+                    <div class="stat-label">Miss</div>
+                </div>
+            </div>
+            <div class="stats-container">
+                <div class="stat-item">
+                    <div class="stat-value" id="maxCombo">0</div>
+                    <div class="stat-label">最高连击</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="accuracy">0%</div>
+                    <div class="stat-label">准确率</div>
+                </div>
+            </div>
+            <button class="restart-btn" id="restartBtn">再来一次</button>
         </div>
     </div>
 
     <script>
+        // 难度配置
+        const DIFFICULTY_CONFIG = {
+            easy: {
+                noteSpeed: 180,
+                spawnInterval: 1500,
+                perfectRange: 120,
+                greatRange: 180,
+                goodRange: 250,
+                gameDuration: 60,
+                noteTypes: 1,
+                lanes: 2
+            },
+            normal: {
+                noteSpeed: 250,
+                spawnInterval: 1000,
+                perfectRange: 80,
+                greatRange: 130,
+                goodRange: 180,
+                gameDuration: 60,
+                noteTypes: 2,
+                lanes: 3
+            },
+            hard: {
+                noteSpeed: 350,
+                spawnInterval: 700,
+                perfectRange: 50,
+                greatRange: 90,
+                goodRange: 140,
+                gameDuration: 75,
+                noteTypes: 3,
+                lanes: 4
+            }
+        };
+
         // 游戏配置
-        const CONFIG = {
-            noteSpeed: 250, // 像素/秒（稍微降低速度，更容易点击）
-            judgeLineX: 120, // 判定线位置
-            perfectRange: 100, // 精准判定范围（像素）
-            spawnInterval: 1200, // 生成间隔（毫秒）
-            gameDuration: 60, // 游戏时长（秒）
+        let CONFIG = {
+            ...DIFFICULTY_CONFIG.normal,
+            judgeLineX: 150,
             colors: {
                 background: '#0a0a0a',
                 judgeLine: '#ffffff',
-                note: '#888888',
+                note: ['#ff6b6b', '#ffd700', '#4ecdc4', '#a855f7'],
                 noteActive: '#ffffff',
-                perfect: '#ffffff',
+                perfect: '#ffd700',
+                great: '#4ecdc4',
+                good: '#4caf50',
                 miss: '#444444'
             }
         };
@@ -229,28 +777,46 @@
             isPlaying: false,
             isPaused: false,
             score: 0,
+            combo: 0,
+            maxCombo: 0,
+            perfectCount: 0,
+            greatCount: 0,
+            goodCount: 0,
+            missCount: 0,
             notes: [],
-            particles: [], // 点击特效粒子
+            particles: [],
+            hitEffects: [],
             lastSpawnTime: 0,
             audioPlaying: false,
+            soundEnabled: true,
             animationId: null,
             timeRemaining: CONFIG.gameDuration,
-            timerInterval: null
+            timerInterval: null,
+            currentDifficulty: 'normal',
+            lanes: [0, 1, 2, 3]
         };
 
         // DOM 元素
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const scoreEl = document.getElementById('score');
+        const comboEl = document.getElementById('combo');
         const timerEl = document.getElementById('timer');
         const startScreen = document.getElementById('startScreen');
+        const difficultyScreen = document.getElementById('difficultyScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
         const finalScoreEl = document.getElementById('finalScore');
         const feedbackEl = document.getElementById('feedback');
         const audioBtn = document.getElementById('audioBtn');
         const resetBtn = document.getElementById('resetBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const exitBtn = document.getElementById('exitBtn');
         const startBtn = document.getElementById('startBtn');
         const restartBtn = document.getElementById('restartBtn');
+        const confirmDifficultyBtn = document.getElementById('confirmDifficultyBtn');
+        const progressFill = document.getElementById('progressFill');
+        const virtualKeys = document.getElementById('virtualKeys');
+        const instructions = document.getElementById('instructions');
 
         // 音频上下文
         let audioContext = null;
@@ -267,68 +833,112 @@
 
         // 粒子特效类
         class Particle {
-            constructor(x, y) {
+            constructor(x, y, color = '#ffffff') {
                 this.x = x;
                 this.y = y;
-                this.vx = (Math.random() - 0.5) * 200;
-                this.vy = (Math.random() - 0.5) * 200;
+                this.vx = (Math.random() - 0.5) * 400;
+                this.vy = (Math.random() - 0.5) * 400;
                 this.life = 1.0;
-                this.decay = 2.0;
-                this.size = Math.random() * 4 + 2;
+                this.decay = 2.5;
+                this.size = Math.random() * 6 + 3;
+                this.color = color;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 10;
             }
 
             update(dt) {
                 this.x += this.vx * dt;
                 this.y += this.vy * dt;
+                this.vy += 200 * dt;
+                this.rotation += this.rotationSpeed * dt;
                 this.life -= this.decay * dt;
                 return this.life > 0;
             }
 
             draw(ctx) {
                 ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
                 ctx.globalAlpha = this.life;
-                ctx.fillStyle = '#ffffff';
+                ctx.fillStyle = this.color;
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                
+                if (Math.random() > 0.5) {
+                    ctx.arc(0, 0, this.size * this.life, 0, Math.PI * 2);
+                } else {
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size * this.life, this.size * this.life);
+                }
                 ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // 击中光环特效
+        class HitEffect {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.radius = 10;
+                this.maxRadius = 80;
+                this.life = 1.0;
+                this.color = color;
+                this.lineWidth = 4;
+            }
+
+            update(dt) {
+                this.radius += 200 * dt;
+                this.life -= 3 * dt;
+                return this.life > 0;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = this.lineWidth * this.life;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
                 ctx.restore();
             }
         }
 
         // 音符类
         class Note {
-            constructor(x, y, type) {
+            constructor(x, y, type, lane, colorIndex) {
                 this.x = x;
                 this.y = y;
                 this.type = type;
-                this.width = 60;
-                this.height = 60;
+                this.lane = lane;
+                this.width = 50;
+                this.height = 50;
                 this.hit = false;
                 this.missed = false;
                 this.scale = 1;
                 this.targetScale = 1;
-                this.color = CONFIG.colors.note;
-                this.hitBoxRadius = 50;
+                this.color = CONFIG.colors.note[colorIndex % CONFIG.colors.note.length];
+                this.hitBoxRadius = 45;
                 this.hitTime = 0;
+                this.rotation = 0;
+                this.glowIntensity = 0;
             }
 
             update(dt) {
-                // 平滑缩放动画
-                this.scale += (this.targetScale - this.scale) * 10 * dt;
+                this.scale += (this.targetScale - this.scale) * 15 * dt;
+                this.glowIntensity = Math.max(0, 1 - Math.abs(this.x - CONFIG.judgeLineX) / 300);
                 
                 if (this.hit || this.missed) {
                     this.hitTime += dt;
-                    this.scale = 1 + this.hitTime * 3;
-                    this.color = this.hit ? CONFIG.colors.perfect : CONFIG.colors.miss;
-                    return this.hitTime < 0.3;
+                    this.scale = 1 + this.hitTime * 4;
+                    return this.hitTime < 0.4;
                 }
                 
                 this.x -= CONFIG.noteSpeed * dt;
+                this.rotation += dt * 2;
                 
-                // 检查是否错过
-                if (this.x < CONFIG.judgeLineX - 150 && !this.missed && !this.hit) {
+                if (this.x < CONFIG.judgeLineX - CONFIG.goodRange && !this.missed && !this.hit) {
                     this.missed = true;
-                    showFeedback('miss');
+                    handleHit('miss');
                 }
                 
                 return this.x > -100;
@@ -337,123 +947,430 @@
             draw(ctx) {
                 ctx.save();
                 ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
                 ctx.scale(this.scale, this.scale);
                 
-                // 绘制发光效果
-                if (this.hit) {
-                    ctx.shadowColor = '#ffffff';
-                    ctx.shadowBlur = 30;
+                if (this.hit || this.glowIntensity > 0.3) {
+                    ctx.shadowColor = this.hit ? '#ffffff' : this.color;
+                    ctx.shadowBlur = this.hit ? 40 : 20 * this.glowIntensity;
                 }
                 
-                ctx.fillStyle = this.color;
+                ctx.fillStyle = this.hit ? '#ffffff' : this.color;
                 
                 if (this.type === 'circle') {
                     ctx.beginPath();
                     ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
                     ctx.fill();
+                    
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.width / 4, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'rect') {
+                    const halfW = this.width / 2;
+                    const halfH = this.height / 2;
+                    const radius = 8;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(-halfW + radius, -halfH);
+                    ctx.lineTo(halfW - radius, -halfH);
+                    ctx.quadraticCurveTo(halfW, -halfH, halfW, -halfH + radius);
+                    ctx.lineTo(halfW, halfH - radius);
+                    ctx.quadraticCurveTo(halfW, halfH, halfW - radius, halfH);
+                    ctx.lineTo(-halfW + radius, halfH);
+                    ctx.quadraticCurveTo(-halfW, halfH, -halfW, halfH - radius);
+                    ctx.lineTo(-halfW, -halfH + radius);
+                    ctx.quadraticCurveTo(-halfW, -halfH, -halfW + radius, -halfH);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.fillRect(-halfW / 2, -halfH / 2, halfW, halfH);
                 } else {
-                    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                    ctx.beginPath();
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+                        const px = Math.cos(angle) * this.width / 2;
+                        const py = Math.sin(angle) * this.height / 2;
+                        if (i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
                 }
                 
                 ctx.restore();
             }
 
-            checkHit(clickX, clickY) {
-                if (this.hit || this.missed) return false;
+            checkHit() {
+                if (this.hit || this.missed) return null;
                 
-                const dx = clickX - this.x;
-                const dy = clickY - this.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                const positionDiff = Math.abs(this.x - CONFIG.judgeLineX);
                 
-                // 检查是否点击在图形上
-                if (distance < this.hitBoxRadius + this.width / 2) {
-                    // 检查时机：图形需要在判定线附近
-                    const positionDiff = Math.abs(this.x - CONFIG.judgeLineX);
-                    if (positionDiff < CONFIG.perfectRange) {
-                        this.hit = true;
-                        this.targetScale = 1.3;
-                        return true;
-                    }
+                if (positionDiff < CONFIG.perfectRange) {
+                    this.hit = true;
+                    this.targetScale = 1.5;
+                    return 'perfect';
+                } else if (positionDiff < CONFIG.greatRange) {
+                    this.hit = true;
+                    this.targetScale = 1.4;
+                    return 'great';
+                } else if (positionDiff < CONFIG.goodRange) {
+                    this.hit = true;
+                    this.targetScale = 1.3;
+                    return 'good';
                 }
-                return false;
+                
+                return null;
             }
         }
 
-        // 初始化音频
         function initAudio() {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
         }
 
-        // 播放节拍音
-        function playClick(time) {
+        function playSound(type, time) {
+            if (!state.soundEnabled || !audioContext) return;
+            
             const osc = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             
             osc.connect(gainNode);
             gainNode.connect(audioContext.destination);
             
-            osc.frequency.value = 800;
-            osc.type = 'sine';
+            switch(type) {
+                case 'perfect':
+                    osc.frequency.value = 880;
+                    osc.type = 'sine';
+                    break;
+                case 'great':
+                    osc.frequency.value = 660;
+                    osc.type = 'sine';
+                    break;
+                case 'good':
+                    osc.frequency.value = 440;
+                    osc.type = 'triangle';
+                    break;
+                case 'miss':
+                    osc.frequency.value = 200;
+                    osc.type = 'sawtooth';
+                    break;
+                case 'beat':
+                    osc.frequency.value = 60;
+                    osc.type = 'sine';
+                    break;
+            }
             
-            gainNode.gain.setValueAtTime(0.3, time);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+            gainNode.gain.setValueAtTime(type === 'miss' ? 0.15 : 0.3, time);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
             
             osc.start(time);
-            osc.stop(time + 0.1);
+            osc.stop(time + 0.15);
         }
 
-        // 调度器
         function scheduler() {
             while (nextNoteTime < audioContext.currentTime + scheduleAheadTime) {
-                playClick(nextNoteTime);
+                playSound('beat', nextNoteTime);
                 spawnNote();
                 nextNoteTime += CONFIG.spawnInterval / 1000;
             }
             timerID = setTimeout(scheduler, lookahead);
         }
 
-        // 生成音符
+        function getLaneY(lane) {
+            const centerY = canvas.height / 2;
+            const spacing = 100;
+            const offset = (lane - 1.5) * spacing;
+            return centerY + offset;
+        }
+
         function spawnNote() {
-            const types = ['circle', 'rect'];
-            const type = types[Math.floor(Math.random() * types.length)];
-            const y = canvas.height / 2 + (Math.random() - 0.5) * 200;
-            const note = new Note(canvas.width + 80, y, type);
+            const types = ['circle', 'rect', 'hex'];
+            const typeIndex = Math.floor(Math.random() * Math.min(CONFIG.noteTypes, types.length));
+            const type = types[typeIndex];
+            
+            const lane = Math.floor(Math.random() * 4);
+            const y = getLaneY(lane);
+            
+            const note = new Note(canvas.width + 80, y, type, lane, lane);
             state.notes.push(note);
         }
 
-        // 创建点击特效
-        function createHitEffect(x, y) {
-            for (let i = 0; i < 12; i++) {
-                state.particles.push(new Particle(x, y));
+        function createHitEffect(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                state.particles.push(new Particle(x, y, color));
+            }
+            state.hitEffects.push(new HitEffect(x, y, color));
+        }
+
+        function handleHit(result) {
+            const currentTime = audioContext ? audioContext.currentTime : 0;
+            
+            switch(result) {
+                case 'perfect':
+                    state.score += 100 * (1 + state.combo * 0.1);
+                    state.combo++;
+                    state.perfectCount++;
+                    playSound('perfect', currentTime);
+                    break;
+                case 'great':
+                    state.score += 70 * (1 + state.combo * 0.05);
+                    state.combo++;
+                    state.greatCount++;
+                    playSound('great', currentTime);
+                    break;
+                case 'good':
+                    state.score += 40;
+                    state.combo++;
+                    state.goodCount++;
+                    playSound('good', currentTime);
+                    break;
+                case 'miss':
+                    state.combo = 0;
+                    state.missCount++;
+                    playSound('miss', currentTime);
+                    break;
+            }
+            
+            state.maxCombo = Math.max(state.maxCombo, state.combo);
+            
+            scoreEl.textContent = Math.floor(state.score);
+            scoreEl.classList.add('pop');
+            setTimeout(() => scoreEl.classList.remove('pop'), 150);
+            
+            if (state.combo >= 5) {
+                comboEl.textContent = state.combo + ' COMBO';
+                comboEl.classList.add('show');
+            } else {
+                comboEl.classList.remove('show');
+            }
+            
+            showFeedback(result);
+        }
+
+        function showFeedback(type) {
+            feedbackEl.className = 'show ' + type;
+            feedbackEl.textContent = type === 'perfect' ? 'PERFECT!' : 
+                                   type === 'great' ? 'GREAT!' : 
+                                   type === 'good' ? 'GOOD' : 'MISS';
+            
+            setTimeout(() => {
+                feedbackEl.classList.remove('show');
+            }, 400);
+        }
+
+        function handleInput(inputLane = null) {
+            if (!state.isPlaying || state.isPaused) return;
+            
+            let hitResult = null;
+            let hitNote = null;
+            
+            for (let i = state.notes.length - 1; i >= 0; i--) {
+                const note = state.notes[i];
+                
+                if (note.hit || note.missed) continue;
+                
+                if (inputLane !== null && note.lane !== inputLane) continue;
+                
+                const result = note.checkHit();
+                if (result) {
+                    hitResult = result;
+                    hitNote = note;
+                    createHitEffect(note.x, note.y, note.color);
+                    break;
+                }
+            }
+            
+            if (hitResult && hitNote) {
+                handleHit(hitResult);
             }
         }
 
-        // 开始音频
+        function handleKeyInput(key) {
+            const keyMap = {
+                'd': 0,
+                'f': 1,
+                'j': 2,
+                'k': 3,
+                ' ': null
+            };
+            
+            if (key in keyMap) {
+                handleInput(keyMap[key]);
+            }
+        }
+
+        let lastTime = 0;
+        function gameLoop(currentTime) {
+            if (!state.isPlaying) return;
+            
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            if (!state.isPaused) {
+                state.notes = state.notes.filter(note => note.update(dt));
+                state.particles = state.particles.filter(p => p.update(dt));
+                state.hitEffects = state.hitEffects.filter(e => e.update(dt));
+            }
+            
+            draw();
+            
+            state.animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function draw() {
+            ctx.fillStyle = CONFIG.colors.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawBackgroundGrid();
+            drawLanes();
+            drawJudgeLine();
+            
+            state.notes.forEach(note => note.draw(ctx));
+            state.particles.forEach(p => p.draw(ctx));
+            state.hitEffects.forEach(e => e.draw(ctx));
+        }
+
+        function drawBackgroundGrid() {
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            
+            const gridSize = 50;
+            
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function drawLanes() {
+            const laneColors = ['rgba(255, 107, 107, 0.1)', 'rgba(255, 215, 0, 0.1)', 
+                               'rgba(78, 205, 196, 0.1)', 'rgba(168, 85, 247, 0.1)'];
+            
+            for (let i = 0; i < 4; i++) {
+                const y = getLaneY(i);
+                const laneHeight = 80;
+                
+                ctx.fillStyle = laneColors[i];
+                ctx.fillRect(0, y - laneHeight / 2, canvas.width, laneHeight);
+                
+                ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, y - laneHeight / 2);
+                ctx.lineTo(canvas.width, y - laneHeight / 2);
+                ctx.moveTo(0, y + laneHeight / 2);
+                ctx.lineTo(canvas.width, y + laneHeight / 2);
+                ctx.stroke();
+            }
+        }
+
+        function drawJudgeLine() {
+            const gradient = ctx.createLinearGradient(
+                CONFIG.judgeLineX, 0, 
+                CONFIG.judgeLineX, canvas.height
+            );
+            gradient.addColorStop(0, 'rgba(255,255,255,0)');
+            gradient.addColorStop(0.3, 'rgba(255,255,255,0.8)');
+            gradient.addColorStop(0.5, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.7, 'rgba(255,255,255,0.8)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(CONFIG.judgeLineX, 0);
+            ctx.lineTo(CONFIG.judgeLineX, canvas.height);
+            ctx.stroke();
+            
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(CONFIG.judgeLineX - 10, 0);
+            ctx.lineTo(CONFIG.judgeLineX - 10, canvas.height);
+            ctx.moveTo(CONFIG.judgeLineX + 10, 0);
+            ctx.lineTo(CONFIG.judgeLineX + 10, canvas.height);
+            ctx.stroke();
+            
+            ctx.fillStyle = 'rgba(255,255,255,0.02)';
+            ctx.fillRect(
+                CONFIG.judgeLineX - CONFIG.goodRange,
+                0,
+                CONFIG.goodRange * 2,
+                canvas.height
+            );
+        }
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            difficultyScreen.classList.remove('hidden');
+        }
+
+        function confirmDifficulty() {
+            difficultyScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            CONFIG = {
+                ...DIFFICULTY_CONFIG[state.currentDifficulty],
+                judgeLineX: 150,
+                colors: CONFIG.colors
+            };
+            
+            state.isPlaying = true;
+            state.isPaused = false;
+            state.score = 0;
+            state.combo = 0;
+            state.maxCombo = 0;
+            state.perfectCount = 0;
+            state.greatCount = 0;
+            state.goodCount = 0;
+            state.missCount = 0;
+            state.notes = [];
+            state.particles = [];
+            state.hitEffects = [];
+            state.timeRemaining = CONFIG.gameDuration;
+            
+            scoreEl.textContent = '0';
+            timerEl.textContent = state.timeRemaining + 's';
+            comboEl.classList.remove('show');
+            progressFill.style.width = '100%';
+            
+            lastTime = performance.now();
+            
+            virtualKeys.classList.remove('hidden');
+            instructions.classList.remove('hidden');
+            
+            if (!state.audioPlaying) {
+                startAudio();
+            }
+            
+            gameLoop(performance.now());
+        }
+
         function startAudio() {
             if (!audioContext) initAudio();
             
-            if (state.audioPlaying) {
-                clearTimeout(timerID);
-                state.audioPlaying = false;
-                state.isPaused = true;
-                audioBtn.textContent = '播放音频';
-                stopTimer();
-            } else {
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
-                nextNoteTime = audioContext.currentTime + 0.1;
-                scheduler();
-                state.audioPlaying = true;
-                state.isPaused = false;
-                audioBtn.textContent = '暂停音频';
-                startTimer();
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
             }
+            
+            nextNoteTime = audioContext.currentTime + 0.1;
+            scheduler();
+            state.audioPlaying = true;
+            startTimer();
         }
 
-        // 开始倒计时
         function startTimer() {
             if (state.timerInterval) return;
             
@@ -461,6 +1378,7 @@
                 if (!state.isPaused && state.isPlaying) {
                     state.timeRemaining--;
                     timerEl.textContent = state.timeRemaining + 's';
+                    progressFill.style.width = (state.timeRemaining / CONFIG.gameDuration * 100) + '%';
                     
                     if (state.timeRemaining <= 0) {
                         endGame();
@@ -469,7 +1387,6 @@
             }, 1000);
         }
 
-        // 停止倒计时
         function stopTimer() {
             if (state.timerInterval) {
                 clearInterval(state.timerInterval);
@@ -477,7 +1394,41 @@
             }
         }
 
-        // 结束游戏
+        function togglePause() {
+            if (!state.isPlaying) return;
+            
+            state.isPaused = !state.isPaused;
+            pauseBtn.textContent = state.isPaused ? '▶️ 继续' : '⏸️ 暂停';
+        }
+
+        function toggleSound() {
+            state.soundEnabled = !state.soundEnabled;
+            audioBtn.textContent = state.soundEnabled ? '🔊 音效' : '🔇 静音';
+        }
+
+        function calculateGrade() {
+            const totalNotes = state.perfectCount + state.greatCount + state.goodCount + state.missCount;
+            if (totalNotes === 0) return 'D';
+            
+            const accuracy = (state.perfectCount * 100 + state.greatCount * 70 + state.goodCount * 40) / (totalNotes * 100);
+            
+            if (accuracy >= 0.95) return 'S';
+            if (accuracy >= 0.85) return 'A';
+            if (accuracy >= 0.70) return 'B';
+            if (accuracy >= 0.50) return 'C';
+            return 'D';
+        }
+
+        function calculateAccuracy() {
+            const totalNotes = state.perfectCount + state.greatCount + state.goodCount + state.missCount;
+            if (totalNotes === 0) return 0;
+            
+            const totalWeight = state.perfectCount * 100 + state.greatCount * 70 + state.goodCount * 40;
+            const maxWeight = totalNotes * 100;
+            
+            return Math.round((totalWeight / maxWeight) * 100);
+        }
+
         function endGame() {
             state.isPlaying = false;
             state.isPaused = false;
@@ -489,160 +1440,62 @@
             if (state.audioPlaying) {
                 clearTimeout(timerID);
                 state.audioPlaying = false;
-                audioBtn.textContent = '播放音频';
             }
             
             stopTimer();
             
-            finalScoreEl.textContent = state.score;
+            virtualKeys.classList.add('hidden');
+            instructions.classList.add('hidden');
+            
+            const grade = calculateGrade();
+            const accuracy = calculateAccuracy();
+            
+            document.getElementById('grade').textContent = grade;
+            document.getElementById('grade').className = 'grade-display ' + grade;
+            finalScoreEl.textContent = Math.floor(state.score);
+            document.getElementById('perfectCount').textContent = state.perfectCount;
+            document.getElementById('greatCount').textContent = state.greatCount;
+            document.getElementById('goodCount').textContent = state.goodCount;
+            document.getElementById('missCount').textContent = state.missCount;
+            document.getElementById('maxCombo').textContent = state.maxCombo;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+            
             gameOverScreen.classList.remove('hidden');
         }
 
-        // 显示反馈
-        function showFeedback(type) {
-            feedbackEl.className = 'show ' + type;
-            feedbackEl.textContent = type === 'perfect' ? '+100' : 'miss';
-            
-            setTimeout(() => {
-                feedbackEl.classList.remove('show');
-            }, 300);
-        }
-
-        // 处理点击
-        function handleInput(x, y) {
-            if (!state.isPlaying || state.isPaused) {
-                console.log('游戏未运行或已暂停');
-                return;
-            }
-            
-            console.log('点击位置:', x, y);
-            console.log('当前音符数:', state.notes.length);
-            
-            let hit = false;
-            
-            // 遍历所有音符，检查点击
-            for (let i = state.notes.length - 1; i >= 0; i--) {
-                const note = state.notes[i];
-                
-                if (note.hit || note.missed) continue;
-                
-                const dx = x - note.x;
-                const dy = y - note.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                console.log(`音符${i}: 位置(${note.x.toFixed(1)}, ${note.y.toFixed(1)}), 距离${distance.toFixed(1)}`);
-                
-                // 检查是否点击在图形上（更宽松的判定）
-                if (distance < note.hitBoxRadius + note.width / 2) {
-                    // 检查时机
-                    const positionDiff = Math.abs(note.x - CONFIG.judgeLineX);
-                    console.log(`  判定线距离: ${positionDiff.toFixed(1)}, 允许范围: ${CONFIG.perfectRange}`);
-                    
-                    if (positionDiff < CONFIG.perfectRange) {
-                        note.hit = true;
-                        note.targetScale = 1.5;
-                        state.score += 100;
-                        scoreEl.textContent = state.score;
-                        
-                        // 分数动画
-                        scoreEl.classList.add('pop');
-                        setTimeout(() => scoreEl.classList.remove('pop'), 100);
-                        
-                        // 创建粒子特效
-                        createHitEffect(note.x, note.y);
-                        
-                        showFeedback('perfect');
-                        hit = true;
-                        console.log('命中! 得分:', state.score);
-                        break;
-                    } else {
-                        console.log('  时机不对，距离判定线太远');
-                    }
-                }
-            }
-            
-            if (!hit) {
-                console.log('未命中任何音符');
-            }
-        }
-
-        // 游戏循环
-        let lastTime = 0;
-        function gameLoop(currentTime) {
-            if (!state.isPlaying) return;
-            
-            const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
-            lastTime = currentTime;
-            
-            if (!state.isPaused) {
-                // 更新音符
-                state.notes = state.notes.filter(note => note.update(dt));
-                
-                // 更新粒子
-                state.particles = state.particles.filter(p => p.update(dt));
-            }
-            
-            // 绘制
-            draw();
-            
-            state.animationId = requestAnimationFrame(gameLoop);
-        }
-
-        // 绘制
-        function draw() {
-            // 清空画布
-            ctx.fillStyle = CONFIG.colors.background;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // 绘制判定线
-            ctx.strokeStyle = CONFIG.colors.judgeLine;
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(CONFIG.judgeLineX, 0);
-            ctx.lineTo(CONFIG.judgeLineX, canvas.height);
-            ctx.stroke();
-            
-            // 绘制判定区域提示
-            ctx.fillStyle = 'rgba(255,255,255,0.03)';
-            ctx.fillRect(
-                CONFIG.judgeLineX - CONFIG.perfectRange,
-                0,
-                CONFIG.perfectRange * 2,
-                canvas.height
-            );
-            
-            // 绘制判定线发光效果
-            ctx.shadowColor = 'rgba(255,255,255,0.5)';
-            ctx.shadowBlur = 10;
-            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(CONFIG.judgeLineX - CONFIG.perfectRange, 0);
-            ctx.lineTo(CONFIG.judgeLineX - CONFIG.perfectRange, canvas.height);
-            ctx.moveTo(CONFIG.judgeLineX + CONFIG.perfectRange, 0);
-            ctx.lineTo(CONFIG.judgeLineX + CONFIG.perfectRange, canvas.height);
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-            
-            // 绘制音符
-            state.notes.forEach(note => note.draw(ctx));
-            
-            // 绘制粒子特效
-            state.particles.forEach(p => p.draw(ctx));
-        }
-
-        // 开始游戏
-        function startGame() {
-            startScreen.classList.add('hidden');
-            gameOverScreen.classList.add('hidden');
-            state.isPlaying = true;
+        function quickRestartGame() {
+            state.isPlaying = false;
             state.isPaused = false;
             state.score = 0;
+            state.combo = 0;
+            state.maxCombo = 0;
+            state.perfectCount = 0;
+            state.greatCount = 0;
+            state.goodCount = 0;
+            state.missCount = 0;
             state.notes = [];
             state.particles = [];
+            state.hitEffects = [];
             state.timeRemaining = CONFIG.gameDuration;
+            
             scoreEl.textContent = '0';
             timerEl.textContent = state.timeRemaining + 's';
+            comboEl.classList.remove('show');
+            progressFill.style.width = '100%';
+            pauseBtn.textContent = '⏸️ 暂停';
+            
+            if (state.animationId) {
+                cancelAnimationFrame(state.animationId);
+            }
+            
+            if (state.audioPlaying) {
+                clearTimeout(timerID);
+                state.audioPlaying = false;
+            }
+            
+            stopTimer();
+            
+            state.isPlaying = true;
             lastTime = performance.now();
             
             if (!state.audioPlaying) {
@@ -652,16 +1505,19 @@
             gameLoop(performance.now());
         }
 
-        // 重置游戏
         function resetGame() {
             state.isPlaying = false;
             state.isPaused = false;
             state.score = 0;
             state.notes = [];
             state.particles = [];
+            state.hitEffects = [];
             state.timeRemaining = CONFIG.gameDuration;
             scoreEl.textContent = '0';
             timerEl.textContent = state.timeRemaining + 's';
+            comboEl.classList.remove('show');
+            progressFill.style.width = '100%';
+            pauseBtn.textContent = '⏸️ 暂停';
             
             if (state.animationId) {
                 cancelAnimationFrame(state.animationId);
@@ -670,58 +1526,113 @@
             if (state.audioPlaying) {
                 clearTimeout(timerID);
                 state.audioPlaying = false;
-                audioBtn.textContent = '播放音频';
             }
             
             stopTimer();
             
+            virtualKeys.classList.add('hidden');
+            instructions.classList.add('hidden');
+            
             startScreen.classList.remove('hidden');
             gameOverScreen.classList.add('hidden');
+            difficultyScreen.classList.add('hidden');
+            
             draw();
         }
 
-        // 事件监听
+        function exitGame() {
+            state.isPlaying = false;
+            state.isPaused = false;
+            
+            if (state.animationId) {
+                cancelAnimationFrame(state.animationId);
+            }
+            
+            if (state.audioPlaying) {
+                clearTimeout(timerID);
+                state.audioPlaying = false;
+            }
+            
+            stopTimer();
+            
+            virtualKeys.classList.add('hidden');
+            instructions.classList.add('hidden');
+            
+            startScreen.classList.remove('hidden');
+            gameOverScreen.classList.add('hidden');
+            difficultyScreen.classList.add('hidden');
+            
+            draw();
+        }
+
         canvas.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            console.log('鼠标点击:', x, y);
-            handleInput(x, y);
+            handleInput();
         });
 
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            const rect = canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
-            console.log('触摸点击:', x, y);
-            handleInput(x, y);
+            handleInput();
         }, { passive: false });
 
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                // 空格键：自动命中判定线附近的第一个音符
-                for (let i = state.notes.length - 1; i >= 0; i--) {
-                    const note = state.notes[i];
-                    if (!note.hit && !note.missed) {
-                        const positionDiff = Math.abs(note.x - CONFIG.judgeLineX);
-                        if (positionDiff < CONFIG.perfectRange) {
-                            note.hit = true;
-                            note.targetScale = 1.5;
-                            state.score += 100;
-                            scoreEl.textContent = state.score;
-                            scoreEl.classList.add('pop');
-                            setTimeout(() => scoreEl.classList.remove('pop'), 100);
-                            createHitEffect(note.x, note.y);
-                            showFeedback('perfect');
-                            break;
-                        }
-                    }
-                }
+            if (e.repeat) return;
+            
+            const key = e.key.toLowerCase();
+            
+            if (key === 'escape' || key === 'p') {
+                togglePause();
+                return;
             }
+            
+            handleKeyInput(key);
+            
+            const keyElement = document.querySelector(`.virtual-key[data-key="${key}"]`);
+            if (keyElement) {
+                keyElement.classList.add('active');
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            const keyElement = document.querySelector(`.virtual-key[data-key="${key}"]`);
+            if (keyElement) {
+                keyElement.classList.remove('active');
+            }
+        });
+
+        document.querySelectorAll('.virtual-key').forEach(key => {
+            key.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                key.classList.add('active');
+                handleKeyInput(key.dataset.key);
+            });
+            
+            key.addEventListener('mouseup', () => {
+                key.classList.remove('active');
+            });
+            
+            key.addEventListener('mouseleave', () => {
+                key.classList.remove('active');
+            });
+            
+            key.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                key.classList.add('active');
+                handleKeyInput(key.dataset.key);
+            });
+            
+            key.addEventListener('touchend', () => {
+                key.classList.remove('active');
+            });
+        });
+
+        document.querySelectorAll('.difficulty-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.difficulty-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                state.currentDifficulty = card.dataset.difficulty;
+            });
         });
 
         window.addEventListener('resize', () => {
@@ -731,10 +1642,12 @@
 
         startBtn.addEventListener('click', startGame);
         restartBtn.addEventListener('click', startGame);
-        audioBtn.addEventListener('click', startAudio);
-        resetBtn.addEventListener('click', resetGame);
+        confirmDifficultyBtn.addEventListener('click', confirmDifficulty);
+        audioBtn.addEventListener('click', toggleSound);
+        resetBtn.addEventListener('click', quickRestartGame);
+        pauseBtn.addEventListener('click', togglePause);
+        exitBtn.addEventListener('click', exitGame);
 
-        // 初始化
         resizeCanvas();
         draw();
     </script>
